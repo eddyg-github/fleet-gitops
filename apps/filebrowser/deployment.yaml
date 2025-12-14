@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebrowser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filebrowser
+  template:
+    metadata:
+      labels:
+        app: filebrowser
+    spec:
+      containers:
+      - name: filebrowser
+        image: filebrowser/filebrowser:latest
+        ports:
+        - containerPort: 80
+
+        env:
+        - name: FB_ROOT
+          value: /srv
+
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            if [ ! -f /config/filebrowser.db ]; then
+              filebrowser -d /config/filebrowser.db config init;
+              filebrowser -d /config/filebrowser.db users add admin admin12345678 --perm.admin;
+            fi;
+            exec filebrowser -d /config/filebrowser.db --root /srv --address 0.0.0.0 --port 80
+
+        volumeMounts:
+        - name: data
+          mountPath: /srv
+        - name: data
+          mountPath: /config
+
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: filebrowser-pvc
